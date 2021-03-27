@@ -1,3 +1,4 @@
+import wandb
 import logging
 import os
 import sys
@@ -165,7 +166,7 @@ class GroupedLengthsTrainer(CTCTrainer):
     def __init__(self, train_seq_lengths:List[int], *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.train_seq_lengths = train_seq_lengths
-    
+
     def _get_train_sampler(self) -> Optional[torch.utils.data.sampler.Sampler]:
         if isinstance(self.train_dataset, torch.utils.data.IterableDataset) or not isinstance(
             self.train_dataset, collections.abc.Sized
