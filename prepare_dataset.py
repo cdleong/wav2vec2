@@ -21,6 +21,7 @@ from argument_classes import ModelArguments, DataTrainingArguments
 
 import ftfy
 import unicodedata
+import jiwer
 
 args_file = './args.json'
 parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
