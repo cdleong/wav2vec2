@@ -20,6 +20,7 @@ from transformers import (
 from argument_classes import ModelArguments, DataTrainingArguments
 
 import ftfy
+import unicodedata
 
 args_file = './args.json'
 parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
@@ -42,6 +43,7 @@ arabic_characters = r'[\ە\ش\ب]'
 def strip_accents(s):
    return ''.join(c for c in unicodedata.normalize('NFD', s)
                   if unicodedata.category(c) != 'Mn')
+
 def remove_special_characters(batch):
     # remove the three arabic characters: 'ب': 42, 'ش': 6, 'ە': 21,
     # not even pronounced in common_voice_rw_23520407.mp3	بەش na none	2	0	twenties			rw
