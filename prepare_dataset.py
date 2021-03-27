@@ -1,6 +1,6 @@
 import json
 import re
-from pathlib import Pathi
+from pathlib import Path
 
 from tqdm.auto import tqdm
 import torch
@@ -39,7 +39,9 @@ eval_dataset = datasets.load_dataset("common_voice", data_args.dataset_config_na
 #chars_to_ignore_regex = f'[{"".join(data_args.chars_to_ignore)}]'
 chars_to_ignore_regex = r'[\,\?\.\!\-\;\:\"\“\%\‘\”\�\(\)\/\®\_\©\√\«\[\]\{\}\™\‽\…\‟\ˮ\„\″\¸\»\·\•\˝\˜˜\ʺ\|\—\¬\~\¨\ß\#\€\*\+\<\>\=\¤\$\ª\£\°]'
 arabic_characters = r'[\ە\ش\ب]'
-
+def strip_accents(s):
+   return ''.join(c for c in unicodedata.normalize('NFD', s)
+                  if unicodedata.category(c) != 'Mn')
 def remove_special_characters(batch):
     # remove the three arabic characters: 'ب': 42, 'ش': 6, 'ە': 21,
     # not even pronounced in common_voice_rw_23520407.mp3	بەش na none	2	0	twenties			rw
