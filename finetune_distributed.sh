@@ -1,3 +1,4 @@
+# https://discuss.huggingface.co/t/weights-biases-supporting-wave2vec2-finetuning/4839/2
 python -m torch.distributed.launch \
 --nproc_per_node 4 run_finetuning.py \
 --model_name_or_path="facebook/wav2vec2-large-xlsr-53" \
@@ -26,4 +27,9 @@ python -m torch.distributed.launch \
 --do_train \
 --do_eval \
 --dataloader_num_workers="52" \
---group_by_length
+--group_by_length \
+--report_to="wandb" \
+--run_name = 'rw-distributed-baseline', \
+--load_best_model_at_end = True, \
+--metric_for_best_model='wer', \
+--greater_is_better=False, \
