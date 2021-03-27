@@ -1,7 +1,7 @@
 python run_finetuning.py \
 --model_name_or_path="facebook/wav2vec2-large-xlsr-53" \
---dataset_config_name="de" \
---output_dir=./wav2vec2-large-xlsr-german2 \
+--dataset_config_name="rw" \
+--output_dir=./wav2vec2-large-xlsr-kinyrwanda \
 --preprocessing_num_workers="16" \
 --overwrite_output_dir \
 --num_train_epochs="5" \
