@@ -1,9 +1,9 @@
 python -m torch.distributed.launch \
---nproc_per_node 2 run_finetuning.py \
+--nproc_per_node 4 run_finetuning.py \
 --model_name_or_path="facebook/wav2vec2-large-xlsr-53" \
---dataset_config_name="de" \
---output_dir=./wav2vec2-large-xlsr-german \
---preprocessing_num_workers="16" \
+--dataset_config_name="rw" \
+--output_dir=/workspace/output_models/rw/wav2vec2-large-xlsr-kinyarwanda \
+--preprocessing_num_workers="52" \
 --overwrite_output_dir \
 --num_train_epochs="5" \
 --per_device_train_batch_size="2" \
@@ -25,5 +25,5 @@ python -m torch.distributed.launch \
 --fp16 \
 --do_train \
 --do_eval \
---dataloader_num_workers="16" \
+--dataloader_num_workers="52" \
 --group_by_length

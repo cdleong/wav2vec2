@@ -1,6 +1,6 @@
 # Work in Progress
 
-wav2vec2 finetuning on common voice german.
+wav2vec2 finetuning on common voice kinyarwanda., forked from https://github.com/maxidl/wav2vec2. Documentation below unchanged, but I edited some things for Kinyarwanda. 
 
 ## General Notes & Caveats
 I made some changes to the [run_common_voice.py script](https://github.com/huggingface/transformers/blob/master/examples/research_projects/wav2vec2/run_common_voice.py) improving support of large datasets (`de` language is resource intensive):

@@ -1,6 +1,6 @@
 import json
 import re
-from pathlib import Path
+from pathlib import Pathi
 
 from tqdm.auto import tqdm
 import torch
@@ -19,6 +19,8 @@ from transformers import (
 
 from argument_classes import ModelArguments, DataTrainingArguments
 
+import ftfy
+
 args_file = './args.json'
 parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
 model_args, data_args, training_args = parser.parse_json_file(args_file)
@@ -34,9 +36,123 @@ train_dataset = datasets.load_dataset(
 eval_dataset = datasets.load_dataset("common_voice", data_args.dataset_config_name, split="test")
 
 # Create and save tokenizer
-chars_to_ignore_regex = f'[{"".join(data_args.chars_to_ignore)}]'
+#chars_to_ignore_regex = f'[{"".join(data_args.chars_to_ignore)}]'
+chars_to_ignore_regex = r'[\,\?\.\!\-\;\:\"\“\%\‘\”\�\(\)\/\®\_\©\√\«\[\]\{\}\™\‽\…\‟\ˮ\„\″\¸\»\·\•\˝\˜˜\ʺ\|\—\¬\~\¨\ß\#\€\*\+\<\>\=\¤\$\ª\£\°]'
+arabic_characters = r'[\ە\ش\ب]'
 
 def remove_special_characters(batch):
+    # remove the three arabic characters: 'ب': 42, 'ش': 6, 'ە': 21,
+    # not even pronounced in common_voice_rw_23520407.mp3	بەش na none	2	0	twenties			rw
+    batch["sentence"] = re.sub(arabic_characters, '', batch["sentence"])
+
+    # replace special version of characters
+
+    # в found in common_voice_rw_23200846.mp3	ni umweкre mu baвri
+    batch["sentence"] = re.sub('в', 'b', batch["sentence"])
+
+
+    # ﬁ common_voice_rw_23158647.mp3	hagati y’abaﬁte imyanya runaka
+    batch["sentence"] = re.sub('ﬁ', 'fi', batch["sentence"])
+
+    # 'к': 1, common_voice_rw_23200846.mp3	ni umweкre mu baвri
+    batch["sentence"] = re.sub('к', 'k', batch["sentence"])
+
+    # о
+    batch["sentence"] = re.sub('о', 'o', batch["sentence"])
+
+    # р -> p
+    batch["sentence"] = re.sub('р', 'p', batch["sentence"])
+
+    # с -> c
+    batch["sentence"] = re.sub('с', 'c', batch["sentence"])
+
+    # у -> y
+    batch["sentence"] = re.sub('у', 'y', batch["sentence"])
+
+    # і -> i
+    batch["sentence"] = re.sub('і', 'i', batch["sentence"])
+
+
+    # ø found in common_voice_rw_22558611.mp3	Køge North Station naryo n’irindi, just ronounced as O
+    batch["sentence"] = re.sub('ø', 'o', batch["sentence"])
+
+    # ҫ found in common_voice_rw_22577788.mp3	Ati “Albert yari maneko nari muzi akiga muri Rambura Garҫons
+    batch["sentence"] = re.sub('ҫ', 'c', batch["sentence"])
+
+    # 'м': 36, found in  common_voice_rw_22629158.mp3	Lukа Моdrіс (yaguzwe muri Tottenham Hotspur)
+    batch["sentence"] = re.sub('м', 'm', batch["sentence"])
+
+    # ф found in common_voice_rw_23044503.mp3	akagira isura idasebya isфoko, just pronounced as "o"
+    batch["sentence"] = re.sub('ф', 'o', batch["sentence"])
+
+
+    #  '¯': 51, not pronounced in common_voice_rw_23013758.mp3	® akadahera ni urwimo n’urugaryi ¯
+    batch["sentence"] = re.sub('¯', '', batch["sentence"])
+
+    #  '–': 21, found in many places, not pronounced.
+    batch["sentence"] = re.sub('–', '', batch["sentence"])
+
+    #  '―': 35, not pronounced in common_voice_rw_23441475.mp3	cyangwa se mudaherukanye umusuhuza ukoresheje ― Muraho
+    batch["sentence"] = re.sub('―', '', batch["sentence"])
+
+    #  '−': 36}
+    batch["sentence"] = re.sub('−', '', batch["sentence"])
+
+    # ₋ only shows up once, drop
+    batch["sentence"] = re.sub('₋', '', batch["sentence"])
+
+    # ‐ can be dropped too
+    batch["sentence"] = re.sub('‐', '', batch["sentence"])
+
+
+    # normalize apostrophes
+    #  '`': 31,
+    batch["sentence"] = re.sub('`', '\'', batch["sentence"])
+    #  '´': 21,
+    batch["sentence"] = re.sub('´', '\'', batch["sentence"])
+    #  'ʻ': 10,
+    batch["sentence"] = re.sub('ʻ', '\'', batch["sentence"])
+    #  'ʽ': 58,
+    batch["sentence"] = re.sub('ʽ', '\'', batch["sentence"])
+    #  '΄': 61,
+    batch["sentence"] = re.sub('΄', '\'', batch["sentence"])
+
+    # double-singlequotes go away entirely
+    batch["sentence"] = re.sub("''", '', batch["sentence"])
+
+
+
+
+
+    # ¼ is pronounced. Sounds like "chimecha" to me. ½ is as well. ¾ seems to be also.
+
+    # ð only shows up once, and doesn't seem necessary. Drop.
+    batch["sentence"] = re.sub("ð", '', batch["sentence"])
+
+    # ł shows up in a list of Polish place names. replace with l
+    batch["sentence"] = re.sub("ł", 'l', batch["sentence"])
+
+    # - not pronounced, mostly. e.g. common_voice_rw_21012753.mp3	-N’uko ibibazo bya politiki n’umutekano
+    batch["sentence"] = re.sub('-', '', batch["sentence"])
+
+    # æ found in common_voice_rw_23060030.mp3	"muri æon y'ibirimo!" and common_voice_rw_23330049.mp3	"pæan y'urukundo rumwe reverberant.
+    batch["sentence"] = re.sub('æ', 'ae', batch["sentence"])
+
+    # œ shows up in "fœtus" and what looks like corrupted text.
+    batch["sentence"] = re.sub('œ', 'oe', batch["sentence"])
+
+    # @ is pronounced, but there's only 15 examples. Hmmmm... let's replace
+    batch["sentence"] = re.sub('@', ' at ', batch["sentence"])
+
+    # \\ doesn't seem to be pronounced.
+    batch["sentence"] = re.sub("\\\\", ' at ', batch["sentence"])
+
+    # from https://stackoverflow.com/questions/517923/what-is-the-best-way-to-remove-accents-normalize-in-a-python-unicode-string
+    batch["sentence"] = strip_accents(batch["sentence"])
+
+    # just for good measure
+    batch["sentence"] = jiwer.RemovePunctuation()(batch["sentence"])
+
     batch["text"] = re.sub(chars_to_ignore_regex, "", batch["sentence"]).lower() + " "
     return batch
 
