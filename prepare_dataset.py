@@ -221,7 +221,7 @@ processor = Wav2Vec2Processor(feature_extractor=feature_extractor, tokenizer=tok
 
 # load and resample audio, save as raw tensors
 resampler = torchaudio.transforms.Resample(48_000, 16_000)
-resampled_data_dir = Path('./resampled')
+resampled_data_dir = Path('/workspace/.cache/resampled')
 resampled_data_dir.mkdir(exist_ok=True)
 
 def load_resample_save(f):
