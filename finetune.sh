@@ -1,19 +1,19 @@
 python run_finetuning.py \
 --model_name_or_path="facebook/wav2vec2-large-xlsr-53" \
---dataset_config_name="rw" \
---output_dir=./wav2vec2-large-xlsr-kinyrwanda \
+--dataset_config_name="tr" \
+--output_dir=/workspace/output_models/rw/wav2vec2-large-xlsr-kinyarwanda/tr/wav2vec2-large-xlsr-turkish/  \
 --preprocessing_num_workers="16" \
 --overwrite_output_dir \
 --num_train_epochs="5" \
 --per_device_train_batch_size="50" \
 --per_device_eval_batch_size="50" \
---learning_rate="2e-5" \
+--learning_rate="2e-4" \
 --warmup_steps="500" \
 --evaluation_strategy="steps" \
 --save_steps="10000" \
 --eval_steps="10000" \
 --logging_steps="1000" \
---save_total_limit="3" \
+--save_total_limit="5" \
 --freeze_feature_extractor \
 --activation_dropout="0.055" \
 --attention_dropout="0.094" \
@@ -25,4 +25,8 @@ python run_finetuning.py \
 --do_train \
 --do_eval \
 --dataloader_num_workers="16" \
---group_by_length
+--group_by_length \
+--report_to="wandb" \
+--load_best_model_at_end=True \
+--metric_for_best_model='wer' \
+--greater_is_better=False \

@@ -99,3 +99,27 @@ class DataTrainingArguments:
         default=[",", "?", ".", "!", "-", ";", ":", '""', "%", "'", '"', "�"],
         metadata={"help": "A list of characters to remove from the transcripts."},
     )
+    # WANDB LOGGING: 
+#     report_to: Optional[str] = field(
+#         default="wandb",
+#         metadata={"help": "report_to"},        
+#     )
+    
+#     load_best_model_at_end: Optional[bool] = field(
+#         default=True,
+#         metadata={"help": "WANDB: load_best_model_at_end"},        
+#     )
+        
+#     metric_for_best_model: Optional[str] = field(  
+#         default="wer",
+#         metadata={"help": "WANDB param. default is wer"},         
+#     )
+#     greater_is_better: Optional[bool] = field(
+#         default=True,
+#         metadata={"help": "WANDB param. default is false for wer"},                 
+#     )
+#     report_to = 'wandb',  # enable logging to W&B
+#   run_name = 'ie-en_baseline_15e',   # Name your run, optional (this name will not be used if wandb.init() has already been called)
+#   load_best_model_at_end = True,  # This will ensure your best model will be uploaded to W&B
+#   metric_for_best_model='wer',    # Load best model based on "wer", not eval loss
+#   greater_is_better=False,    # Define "best" wer score as the lowest score

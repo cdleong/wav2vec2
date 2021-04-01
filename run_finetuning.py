@@ -36,6 +36,11 @@ from argument_classes import ModelArguments, DataTrainingArguments
 logger = logging.getLogger(__name__)
 
 
+# import wandb
+
+# # + wandb.util.generate_id()
+# wandb.init(project="huggingface")
+
 @dataclass
 class DataCollatorCTCWithPadding:
     """
