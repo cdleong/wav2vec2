@@ -39,7 +39,8 @@ logger = logging.getLogger(__name__)
 # import wandb
 
 # # + wandb.util.generate_id()
-# wandb.init(project="huggingface")
+wandb.init(project="huggingface")
+os.environ['WANDB_WATCH'] = 'all'
 
 @dataclass
 class DataCollatorCTCWithPadding:
