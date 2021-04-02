@@ -233,11 +233,21 @@ def load_resample_save(f):
         input_values = processor(speech_array_resampled, sampling_rate=16_000).input_values
         input_values = torch.from_numpy(input_values).float().flatten()
         torch.save(input_values, new_path)
-    return str(new_path)
+        
+    if new_path.stat().st_size > 0:
+        return str(new_path)
+    else: 
+        return ""
 
 print('load resample save')
 new_train_paths = [load_resample_save(f) for f in tqdm(train_dataset['path'], miniters=100, desc='train')]
 new_eval_paths = [load_resample_save(f) for f in tqdm(eval_dataset['path'], miniters=100, desc='eval')]
+
+print('remove_empty_files from list')
+new_train_paths = [i for i in tqdm(new_train_paths, miniters=100, desc='train') if i]
+new_eval_paths = [i for i in tqdm(new_eval_path, miniters=100, desc='train') if i]
+
+
 
 # update paths and sampling rate
 train_dataset = train_dataset.map(
