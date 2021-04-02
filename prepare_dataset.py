@@ -37,6 +37,8 @@ train_dataset = datasets.load_dataset(
 )
 eval_dataset = datasets.load_dataset("common_voice", data_args.dataset_config_name, split="test")
 
+print(train_dataset.features)
+
 # Create and save tokenizer
 #chars_to_ignore_regex = f'[{"".join(data_args.chars_to_ignore)}]'
 chars_to_ignore_regex = r'[\,\?\.\!\-\;\:\"\“\%\‘\”\�\(\)\/\®\_\©\√\«\[\]\{\}\™\‽\…\‟\ˮ\„\″\¸\»\·\•\˝\˜˜\ʺ\|\—\¬\~\¨\ß\#\€\*\+\<\>\=\¤\$\ª\£\°]'
@@ -224,6 +226,7 @@ resampler = torchaudio.transforms.Resample(48_000, 16_000)
 resampled_data_dir = Path('/workspace/.cache/resampled')
 resampled_data_dir.mkdir(exist_ok=True)
 
+bad_paths = []
 def load_resample_save(f):
     f = Path(f)
     new_path = resampled_data_dir / f'{f.stem}_resampled16k.pt'
@@ -237,15 +240,22 @@ def load_resample_save(f):
     if new_path.stat().st_size > 0:
         return str(new_path)
     else: 
+        print(f"{f} was empty!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        bad_paths.append(str(new_path))
+#         return str(new_path)
         return ""
+        
 
+    
+        
 print('load resample save')
 new_train_paths = [load_resample_save(f) for f in tqdm(train_dataset['path'], miniters=100, desc='train')]
 new_eval_paths = [load_resample_save(f) for f in tqdm(eval_dataset['path'], miniters=100, desc='eval')]
 
-print('remove_empty_files from list')
-new_train_paths = [i for i in tqdm(new_train_paths, miniters=100, desc='train') if i]
-new_eval_paths = [i for i in tqdm(new_eval_path, miniters=100, desc='train') if i]
+# print('remove_empty_files from list')
+# new_train_paths = [i for i in tqdm(new_train_paths, miniters=100, desc='train') if i]
+# new_eval_paths = [i for i in tqdm(new_eval_paths, miniters=100, desc='eval') if i]
+
 
 
 
@@ -288,6 +298,53 @@ eval_dataset = eval_dataset.map(
     batched=True,
     num_proc=data_args.preprocessing_num_workers,
 )
+
+
+
+# https://huggingface.co/docs/datasets/v0.3.0/processing.html#filtering-rows-select-and-filter
+def keep_sample(example):
+    f = example['path']
+    
+    if f: # I set it to "" earlier
+        return True
+    else: 
+        return False
+# #     print(type(f))
+# #     print(f)
+    
+    
+#     if "common_voice_tr_17525363.mp3" in f:
+#         print(f)
+
+#     if f in bad_paths:
+#         print(f"{f} was bad!!!!!!!!!!!!!!!!!")
+#         return False
+    
+#     f = Path(f)
+    
+#     if not f.exists():
+#         print(f"{f} was never created!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+#         return False # didn't get created, don't use it
+        
+        
+        
+#     if f.stat().st_size > 0:
+# #         print("it's big!")
+#         return True
+#     else: 
+#         print(f"{f} was empty!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+#         return False
+        
+print("now train_dataset is this big:")
+print(len(train_dataset))    
+print('filter bad paths from dataset objects')
+print(f"bad paths: {bad_paths}")
+train_dataset = train_dataset.filter(keep_sample)
+eval_dataset = eval_dataset.filter(keep_sample)
+
+print("now train_dataset is this big:")
+print(len(train_dataset))
+
 
 # # save for disk, ready for training
 pq.write_table(train_dataset.data, f'./{data_args.dataset_config_name}.train.parquet')
