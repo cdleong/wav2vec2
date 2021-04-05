@@ -237,7 +237,7 @@ def load_resample_save(f):
         input_values = torch.from_numpy(input_values).float().flatten()
         torch.save(input_values, new_path)
         
-    if new_path.stat().st_size > 0:
+    if new_path.stat().st_size > 0: # TODO: move the file size check to the end!!
         return str(new_path)
     else: 
         print(f"{f} was empty!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
@@ -305,7 +305,7 @@ eval_dataset = eval_dataset.map(
 def keep_sample(example):
     f = example['path']
     
-    if f: # I set it to "" earlier
+    if f: # I set it to "" earlier. TODO: do the actual file size checking here, for aesthetic reasons. 
         return True
     else: 
         return False
