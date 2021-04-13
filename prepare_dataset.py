@@ -39,130 +39,187 @@ eval_dataset = datasets.load_dataset("common_voice", data_args.dataset_config_na
 
 print(train_dataset.features)
 
+print('filter items with small numbers of downvotes from dataset objects')
+train_dataset = train_dataset.filter(lambda example: example["down_votes"] == 0)
+eval_dataset = train_dataset.filter(lambda example: example["down_votes"] == 0)
+
+print("now train_dataset is this big:")
+print(len(train_dataset))
+
+
+train_dataset = train_dataset.filter(lambda batch: len(batch["speech"]) < 150000)
+eval_dataset = eval_dataset.filter(lambda batch: len(batch["speech"]) < 150000)
+
+print("now train_dataset is this big:")
+print(len(train_dataset))
+
+
 # Create and save tokenizer
 #chars_to_ignore_regex = f'[{"".join(data_args.chars_to_ignore)}]'
-chars_to_ignore_regex = r'[\,\?\.\!\-\;\:\"\“\%\‘\”\�\(\)\/\®\_\©\√\«\[\]\{\}\™\‽\…\‟\ˮ\„\″\¸\»\·\•\˝\˜˜\ʺ\|\—\¬\~\¨\ß\#\€\*\+\<\>\=\¤\$\ª\£\°]'
+chars_to_ignore_regex = r'[\,\?\.\!\-\;\:\"\“\%\‘\”\�\(\)\/\®\_\©\√\«\[\]\{\}\™\‽\…\‟\ˮ\„\″\¸\»\·\•\˝\˜˜\ʺ\|\—\¬\~\¨\ß\#\€\*\+\<\>\=\¤\$\ª\£\°\‚\|]'
 arabic_characters = r'[\ە\ش\ب]'
 def strip_accents(s):
    return ''.join(c for c in unicodedata.normalize('NFD', s)
                   if unicodedata.category(c) != 'Mn')
 
 def remove_special_characters(batch):
+
+    
+    batch["text"] = re.sub(chars_to_ignore_regex, "", batch["sentence"]).lower() + " "
+
+#     debug = False
+#     if 'ł' in batch["sentence"]:
+#         print(batch)
+#         print(batch["sentence"])
+#         print(batch["text"])
+#         print("BEFORE")
+#         debug = True 
+        
+#     # ҫ
+#     if 'ҫ' in batch["sentence"]:
+#         print(batch)
+#         print(batch["sentence"])
+#         print(batch["text"])
+#         print("BEFORE")
+#         debug = True 
+            
+    
+    
+    
     # remove the three arabic characters: 'ب': 42, 'ش': 6, 'ە': 21,
     # not even pronounced in common_voice_rw_23520407.mp3	بەش na none	2	0	twenties			rw
-    batch["sentence"] = re.sub(arabic_characters, '', batch["sentence"])
+    batch["text"] = re.sub(arabic_characters, '', batch["text"])
 
     # replace special version of characters
 
     # в found in common_voice_rw_23200846.mp3	ni umweкre mu baвri
-    batch["sentence"] = re.sub('в', 'b', batch["sentence"])
+    batch["text"] = re.sub('в', 'b', batch["text"])
 
 
     # ﬁ common_voice_rw_23158647.mp3	hagati y’abaﬁte imyanya runaka
-    batch["sentence"] = re.sub('ﬁ', 'fi', batch["sentence"])
+    batch["text"] = re.sub('ﬁ', 'fi', batch["text"])
 
     # 'к': 1, common_voice_rw_23200846.mp3	ni umweкre mu baвri
-    batch["sentence"] = re.sub('к', 'k', batch["sentence"])
+    batch["text"] = re.sub('к', 'k', batch["text"])
 
     # о
-    batch["sentence"] = re.sub('о', 'o', batch["sentence"])
+    batch["text"] = re.sub('о', 'o', batch["text"])
 
     # р -> p
-    batch["sentence"] = re.sub('р', 'p', batch["sentence"])
+    batch["text"] = re.sub('р', 'p', batch["text"])
 
     # с -> c
-    batch["sentence"] = re.sub('с', 'c', batch["sentence"])
+    batch["text"] = re.sub('с', 'c', batch["text"])
 
     # у -> y
-    batch["sentence"] = re.sub('у', 'y', batch["sentence"])
+    batch["text"] = re.sub('у', 'y', batch["text"])
 
     # і -> i
-    batch["sentence"] = re.sub('і', 'i', batch["sentence"])
+    batch["text"] = re.sub('і', 'i', batch["text"])
 
 
     # ø found in common_voice_rw_22558611.mp3	Køge North Station naryo n’irindi, just ronounced as O
-    batch["sentence"] = re.sub('ø', 'o', batch["sentence"])
+    batch["text"] = re.sub('ø', 'o', batch["text"])
 
     # ҫ found in common_voice_rw_22577788.mp3	Ati “Albert yari maneko nari muzi akiga muri Rambura Garҫons
-    batch["sentence"] = re.sub('ҫ', 'c', batch["sentence"])
+    batch["text"] = re.sub('ҫ', 'c', batch["text"])
 
     # 'м': 36, found in  common_voice_rw_22629158.mp3	Lukа Моdrіс (yaguzwe muri Tottenham Hotspur)
-    batch["sentence"] = re.sub('м', 'm', batch["sentence"])
+    batch["text"] = re.sub('м', 'm', batch["text"])
 
     # ф found in common_voice_rw_23044503.mp3	akagira isura idasebya isфoko, just pronounced as "o"
-    batch["sentence"] = re.sub('ф', 'o', batch["sentence"])
+    batch["text"] = re.sub('ф', 'o', batch["text"])
 
 
     #  '¯': 51, not pronounced in common_voice_rw_23013758.mp3	® akadahera ni urwimo n’urugaryi ¯
-    batch["sentence"] = re.sub('¯', '', batch["sentence"])
+    batch["text"] = re.sub('¯', '', batch["text"])
 
     #  '–': 21, found in many places, not pronounced.
-    batch["sentence"] = re.sub('–', '', batch["sentence"])
+    batch["text"] = re.sub('–', '', batch["text"])
 
     #  '―': 35, not pronounced in common_voice_rw_23441475.mp3	cyangwa se mudaherukanye umusuhuza ukoresheje ― Muraho
-    batch["sentence"] = re.sub('―', '', batch["sentence"])
+    batch["text"] = re.sub('―', '', batch["text"])
 
     #  '−': 36}
-    batch["sentence"] = re.sub('−', '', batch["sentence"])
+    batch["text"] = re.sub('−', '', batch["text"])
 
     # ₋ only shows up once, drop
-    batch["sentence"] = re.sub('₋', '', batch["sentence"])
+    batch["text"] = re.sub('₋', '', batch["text"])
 
     # ‐ can be dropped too
-    batch["sentence"] = re.sub('‐', '', batch["sentence"])
+    batch["text"] = re.sub('‐', '', batch["text"])
 
 
     # normalize apostrophes
     #  '`': 31,
-    batch["sentence"] = re.sub('`', '\'', batch["sentence"])
+    batch["text"] = re.sub('`', '\'', batch["text"])
     #  '´': 21,
-    batch["sentence"] = re.sub('´', '\'', batch["sentence"])
+    batch["text"] = re.sub('´', '\'', batch["text"])
     #  'ʻ': 10,
-    batch["sentence"] = re.sub('ʻ', '\'', batch["sentence"])
+    batch["text"] = re.sub('ʻ', '\'', batch["text"])
     #  'ʽ': 58,
-    batch["sentence"] = re.sub('ʽ', '\'', batch["sentence"])
+    batch["text"] = re.sub('ʽ', '\'', batch["text"])
     #  '΄': 61,
-    batch["sentence"] = re.sub('΄', '\'', batch["sentence"])
+    batch["text"] = re.sub('΄', '\'', batch["text"])
+    
+    # ʼ
+    batch["text"] = re.sub('ʼ', '\'', batch["text"])
+    # ’
+    batch["text"] = re.sub('’', '\'', batch["text"])
 
     # double-singlequotes go away entirely
-    batch["sentence"] = re.sub("''", '', batch["sentence"])
+    batch["text"] = re.sub("''", '', batch["text"])
 
-
-
-
+#     # |
+#     batch["text"] = re.sub("|", ' ', batch["text"])
+    
 
     # ¼ is pronounced. Sounds like "chimecha" to me. ½ is as well. ¾ seems to be also.
 
     # ð only shows up once, and doesn't seem necessary. Drop.
-    batch["sentence"] = re.sub("ð", '', batch["sentence"])
+    batch["text"] = re.sub("ð", '', batch["text"])
 
     # ł shows up in a list of Polish place names. replace with l
-    batch["sentence"] = re.sub("ł", 'l', batch["sentence"])
+    batch["text"] = re.sub("ł", 'l', batch["text"])
 
     # - not pronounced, mostly. e.g. common_voice_rw_21012753.mp3	-N’uko ibibazo bya politiki n’umutekano
-    batch["sentence"] = re.sub('-', '', batch["sentence"])
+    batch["text"] = re.sub('-', '', batch["text"])
 
     # æ found in common_voice_rw_23060030.mp3	"muri æon y'ibirimo!" and common_voice_rw_23330049.mp3	"pæan y'urukundo rumwe reverberant.
-    batch["sentence"] = re.sub('æ', 'ae', batch["sentence"])
+    batch["text"] = re.sub('æ', 'ae', batch["text"])
 
     # œ shows up in "fœtus" and what looks like corrupted text.
-    batch["sentence"] = re.sub('œ', 'oe', batch["sentence"])
+    batch["text"] = re.sub('œ', 'oe', batch["text"])
 
     # @ is pronounced, but there's only 15 examples. Hmmmm... let's replace
-    batch["sentence"] = re.sub('@', ' at ', batch["sentence"])
+    batch["text"] = re.sub('@', ' at ', batch["text"])
 
     # \\ doesn't seem to be pronounced.
-    batch["sentence"] = re.sub("\\\\", ' at ', batch["sentence"])
+    batch["text"] = re.sub("\\\\", ' at ', batch["text"])
 
     # from https://stackoverflow.com/questions/517923/what-is-the-best-way-to-remove-accents-normalize-in-a-python-unicode-string
-    batch["sentence"] = strip_accents(batch["sentence"])
+    batch["text"] = strip_accents(batch["text"])
 
     # just for good measure
-    batch["sentence"] = jiwer.RemovePunctuation()(batch["sentence"])
+    batch["text"] = jiwer.RemovePunctuation()(batch["text"])
 
-    batch["text"] = re.sub(chars_to_ignore_regex, "", batch["sentence"]).lower() + " "
+    
+    
+    batch["sentence"] = batch["text"]
+    
+#     if debug:
+#         print(batch)
+#         print(batch["sentence"])
+#         print(batch["text"])
+#         print("AFTER")
+#         exit()
+    
     return batch
 
+
+
+print("***********************")
+print("REMOVING SPECIAL CHARACTERS")
 train_dataset = train_dataset.map(remove_special_characters, remove_columns=["sentence"], keep_in_memory=True, num_proc=data_args.preprocessing_num_workers)
 eval_dataset = eval_dataset.map(remove_special_characters, remove_columns=["sentence"], keep_in_memory=True, num_proc=data_args.preprocessing_num_workers)
 
@@ -186,6 +243,8 @@ vocab_test = train_dataset.map(
     remove_columns=eval_dataset.column_names,
 )
 
+
+
 vocab_list = list(set(vocab_train["vocab"][0]) | set(vocab_test["vocab"][0]))
 vocab_dict = {v: k for k, v in enumerate(vocab_list)}
 vocab_dict["|"] = vocab_dict[" "]
@@ -195,6 +254,10 @@ vocab_dict["[PAD]"] = len(vocab_dict)
 
 with open("vocab.json", "w") as vocab_file:
     json.dump(vocab_dict, vocab_file)
+
+# exit()
+
+
 
 if data_args.max_train_samples is not None:
     train_dataset = train_dataset.select(range(data_args.max_train_samples))
@@ -209,6 +272,10 @@ tokenizer = Wav2Vec2CTCTokenizer(
     pad_token="[PAD]",
     word_delimiter_token="|",
 )
+
+
+
+
 feature_extractor = Wav2Vec2FeatureExtractor(
     feature_size=1, sampling_rate=16_000, padding_value=0.0, do_normalize=True, return_attention_mask=True
 )
@@ -281,6 +348,9 @@ def tokenize_targets(batch):
     with processor.as_target_processor():
         batch["labels"] = processor(batch["target_text"]).input_ids
     return batch
+
+
+
 
 print('preparing dataset: train')
 train_dataset = train_dataset.map(
