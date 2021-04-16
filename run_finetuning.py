@@ -266,6 +266,8 @@ def main():
 
     # Set seed before initializing model.
     set_seed(training_args.seed)
+    print(data_args.max_val_samples)
+    exit()
 
 
     # Get the datasets:

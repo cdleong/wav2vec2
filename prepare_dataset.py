@@ -23,6 +23,14 @@ import ftfy
 import unicodedata
 import jiwer
 
+import librosa
+
+import warnings
+warnings.filterwarnings("ignore")
+
+import random
+
+
 args_file = './args.json'
 parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
 model_args, data_args, training_args = parser.parse_json_file(args_file)
@@ -39,21 +47,54 @@ eval_dataset = datasets.load_dataset("common_voice", data_args.dataset_config_na
 
 print(train_dataset.features)
 
+print("original train_dataset length")
+length_original = len(train_dataset)
+print(len(train_dataset))
+
+
 print('filter items with small numbers of downvotes from dataset objects')
 train_dataset = train_dataset.filter(lambda example: example["down_votes"] == 0)
 eval_dataset = train_dataset.filter(lambda example: example["down_votes"] == 0)
 
 print("now train_dataset is this big:")
+length_after_downvotes = len(train_dataset)
 print(len(train_dataset))
 
 
-train_dataset = train_dataset.filter(lambda batch: len(batch["speech"]) < 150000)
-eval_dataset = eval_dataset.filter(lambda batch: len(batch["speech"]) < 150000)
-
-print("now train_dataset is this big:")
-print(len(train_dataset))
 
 
+
+
+# # Filter by max length
+# # copied from https://github.com/elgeish/transformers/blob/820de495fcfc05da447f926189473ffc2cf0a5cb/examples/research_projects/wav2vec2/run_asr.py#L372
+# print("filtering by max duration")
+# def prepare_to_filter_by_max_length(example):
+#     with warnings.catch_warnings():  # prevents warning with PySoundFile
+#         warnings.simplefilter("ignore")
+#         example["speech"], example["sampling_rate"] = librosa.load(example['path'], sr=16_000)
+#         example["duration_in_seconds"] = len(example["speech"]) / example["sampling_rate"]    
+
+
+# train_dataset = train_dataset.map(prepare_to_filter_by_max_length, num_proc=data_args.preprocessing_num_workers)    
+# eval_dataset = eval_dataset.map(prepare_to_filter_by_max_length, num_proc=data_args.preprocessing_num_workers)    
+
+# def filter_by_max_duration(example):
+#     return example["duration_in_seconds"] <= 15
+
+
+# train_dataset = train_dataset.filter(filter_by_max_duration, remove_columns=["duration_in_seconds"], num_proc=data_args.preprocessing_num_workers)   
+# eval_dataset = eval_dataset.filter(filter_by_max_duration, remove_columns=["duration_in_seconds"], num_proc=data_args.preprocessing_num_workers)   
+
+# print("now train_dataset is this big:")
+# length_after_max_duration = len(train_dataset)
+# print(len(train_dataset))
+
+
+
+
+
+
+    
 # Create and save tokenizer
 #chars_to_ignore_regex = f'[{"".join(data_args.chars_to_ignore)}]'
 chars_to_ignore_regex = r'[\,\?\.\!\-\;\:\"\“\%\‘\”\�\(\)\/\®\_\©\√\«\[\]\{\}\™\‽\…\‟\ˮ\„\″\¸\»\·\•\˝\˜˜\ʺ\|\—\¬\~\¨\ß\#\€\*\+\<\>\=\¤\$\ª\£\°\‚\|]'
@@ -255,8 +296,6 @@ vocab_dict["[PAD]"] = len(vocab_dict)
 with open("vocab.json", "w") as vocab_file:
     json.dump(vocab_dict, vocab_file)
 
-# exit()
-
 
 
 if data_args.max_train_samples is not None:
@@ -281,6 +320,12 @@ feature_extractor = Wav2Vec2FeatureExtractor(
 )
 processor = Wav2Vec2Processor(feature_extractor=feature_extractor, tokenizer=tokenizer)
 
+
+
+
+
+
+
 # =======================================================
 # The following part is modified to:
 #   - load, resample, process and save audio files into raw tensors
@@ -293,21 +338,70 @@ resampler = torchaudio.transforms.Resample(48_000, 16_000)
 resampled_data_dir = Path('/workspace/.cache/resampled')
 resampled_data_dir.mkdir(exist_ok=True)
 
+
+max_length_seconds = 15
 bad_paths = []
+too_long_paths = []
+
+def exceeds_max_length(speech_array, sampling_rate, max_duration_seconds=15):
+    exceeds_max_length = False
+    duration_in_seconds = len(speech_array)/sampling_rate
+    if duration_in_seconds > max_duration_seconds:
+        exceeds_max_length = True
+        
+    return exceeds_max_length
+
+    
+
 def load_resample_save(f):
     f = Path(f)
     new_path = resampled_data_dir / f'{f.stem}_resampled16k.pt'
     if not new_path.exists():
         speech_array, sampling_rate = torchaudio.load(f)
+        if exceeds_max_length(speech_array, sampling_rate):
+            too_long_paths.append(str(new_path))
+            return ""
+        
+        
+        # remove files that are too long, so as to not get out of memory errors. 
+        # inspired by https://github.com/serapio/transformers/blob/e17bf2a0e99935e58c50adf6ce70ce68926cc1b3/examples/research_projects/wav2vec2/run_common_voice.py#L511
+        # train_dataset = train_dataset.filter(lambda batch: len(batch["speech"]) < 150000) # this is how they did it in example above.  
+        
+
+        # https://github.com/elgeish/transformers/blob/820de495fcfc05da447f926189473ffc2cf0a5cb/examples/research_projects/wav2vec2/run_asr.py#L375 has another version
+#         example["duration_in_seconds"] = len(example["speech"]) / example["sampling_rate"]
+        
+        
         speech_array_resampled = resampler(speech_array)
         input_values = processor(speech_array_resampled, sampling_rate=16_000).input_values
         input_values = torch.from_numpy(input_values).float().flatten()
         torch.save(input_values, new_path)
-        
-    if new_path.stat().st_size > 0: # TODO: move the file size check to the end!!
+
+#     # TODO: move this check to the if statement above. 
+#     speech_array, sampling_rate = torchaudio.load(f)
+#     if exceeds_max_length(speech_array, sampling_rate):
+#         new_path.unlink()
+#         too_long_paths.append(str(new_path))
+#         return ""
+    
+
+#     speech_array, sampling_rate = torchaudio.load(f)
+#     # remove files that are too long, so as to not get out of memory errors. 
+#     # inspired by https://github.com/serapio/transformers/blob/e17bf2a0e99935e58c50adf6ce70ce68926cc1b3/examples/research_projects/wav2vec2/run_common_voice.py#L511
+#     # train_dataset = train_dataset.filter(lambda batch: len(batch["speech"]) < 150000) # this is how they did it in example above.  
+#     if len(speech_array) > 150000:
+# #         print(f"{f} was too long!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+#         new_path.unlink()  # remove the file
+#         bad_paths.append(str(new_path))
+# #         print(f"{f} was too long!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+# #         exit()
+#         return ""    
+    
+    # remove empty files. 
+    if new_path.stat().st_size > 0: # TODO: move the file size check to the end?
         return str(new_path)
     else: 
-        print(f"{f} was empty!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+#         print(f"{f} was empty!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         bad_paths.append(str(new_path))
 #         return str(new_path)
         return ""
@@ -318,6 +412,10 @@ def load_resample_save(f):
 print('load resample save')
 new_train_paths = [load_resample_save(f) for f in tqdm(train_dataset['path'], miniters=100, desc='train')]
 new_eval_paths = [load_resample_save(f) for f in tqdm(eval_dataset['path'], miniters=100, desc='eval')]
+
+print("now train_dataset is this big:")
+print(len(train_dataset))
+length_after_resample = len(train_dataset)
 
 # print('remove_empty_files from list')
 # new_train_paths = [i for i in tqdm(new_train_paths, miniters=100, desc='train') if i]
@@ -379,41 +477,16 @@ def keep_sample(example):
         return True
     else: 
         return False
-# #     print(type(f))
-# #     print(f)
-    
-    
-#     if "common_voice_tr_17525363.mp3" in f:
-#         print(f)
 
-#     if f in bad_paths:
-#         print(f"{f} was bad!!!!!!!!!!!!!!!!!")
-#         return False
-    
-#     f = Path(f)
-    
-#     if not f.exists():
-#         print(f"{f} was never created!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-#         return False # didn't get created, don't use it
-        
-        
-        
-#     if f.stat().st_size > 0:
-# #         print("it's big!")
-#         return True
-#     else: 
-#         print(f"{f} was empty!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-#         return False
-        
-print("now train_dataset is this big:")
-print(len(train_dataset))    
-print('filter bad paths from dataset objects')
+
+print('filter bad paths and too-long paths from dataset objects')
 print(f"bad paths: {bad_paths}")
 train_dataset = train_dataset.filter(keep_sample)
 eval_dataset = eval_dataset.filter(keep_sample)
 
 print("now train_dataset is this big:")
 print(len(train_dataset))
+length_after_bad_paths_and_too_long = len(train_dataset)
 
 
 # # save for disk, ready for training
@@ -422,3 +495,16 @@ pq.write_table(eval_dataset.data, f'./{data_args.dataset_config_name}.eval.parqu
 
 # save processor for training
 processor.save_pretrained(training_args.output_dir)
+
+print(f"length_original {length_original}")
+print(f"length_after_downvotes {length_after_downvotes}")
+# print(f"length_after_max_duration {length_after_max_duration}")
+print(f"length_after_resample: {length_after_resample}")
+print(f"length_after_bad_paths_and_too_long: {length_after_bad_paths_and_too_long}")
+print(f"len(too_long_paths): {len(too_long_paths)}")
+if len(too_long_paths) > 0:
+    print(f"random too-long file: {random.choice(too_long_paths)}")
+    
+print(f"len(bad_paths): {len(bad_paths)}")    
+if len(bad_paths) > 0:
+    print(f"random empty file: {random.choice(bad_paths)}")
