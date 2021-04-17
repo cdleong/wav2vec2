@@ -52,13 +52,17 @@ length_original = len(train_dataset)
 print(len(train_dataset))
 
 
+eval_original_length = len(eval_dataset)
+
 print('filter items with small numbers of downvotes from dataset objects')
 train_dataset = train_dataset.filter(lambda example: example["down_votes"] == 0)
-eval_dataset = train_dataset.filter(lambda example: example["down_votes"] == 0)
+eval_dataset = eval_dataset.filter(lambda example: example["down_votes"] == 0)
 
 print("now train_dataset is this big:")
 length_after_downvotes = len(train_dataset)
 print(len(train_dataset))
+
+eval_length_after_downvotes = len(eval_dataset)
 
 
 
@@ -487,6 +491,7 @@ eval_dataset = eval_dataset.filter(keep_sample)
 print("now train_dataset is this big:")
 print(len(train_dataset))
 length_after_bad_paths_and_too_long = len(train_dataset)
+eval_length_after_bad_paths_and_too_long = len(eval_dataset)
 
 
 # # save for disk, ready for training
@@ -508,3 +513,8 @@ if len(too_long_paths) > 0:
 print(f"len(bad_paths): {len(bad_paths)}")    
 if len(bad_paths) > 0:
     print(f"random empty file: {random.choice(bad_paths)}")
+    
+
+print(f"eval_original_length: {eval_original_length} ")
+print(f"eval_length_after_downvotes: {eval_length_after_downvotes} ")
+print(f"eval_length_after_bad_paths_and_too_long: {eval_length_after_bad_paths_and_too_long} ")

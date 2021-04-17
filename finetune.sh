@@ -6,6 +6,7 @@ python run_finetuning.py \
 --num_train_epochs="20" \
 --per_device_train_batch_size="2" \
 --per_device_eval_batch_size="2" \
+--gradient_accumulation_steps="4" \
 --learning_rate="2.34e-4" \
 --evaluation_strategy="steps" \
 --save_steps="1000" \
